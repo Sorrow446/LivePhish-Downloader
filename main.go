@@ -25,12 +25,14 @@ import (
 )
 
 const (
-	clientId     = "Fujeij8d764ydxcnh4676scsr7f4"
-	developerKey = "njeurd876frhdjxy6sxxe721"
-	sigKey       = "jdfirj8475jf_"
-	userAgent    = "LivePhish/3.4.4.355 (Android; 7.1.2; Asus; ASUS_Z01QD)"
-	apiBase      = "https://www.livephish.com/"
-	apiBase2     = "https://id.livephish.com/connect/"
+	clientId        = "Fujeij8d764ydxcnh4676scsr7f4"
+	developerKey    = "njeurd876frhdjxy6sxxe721"
+	sigKey          = "jdfirj8475jf_"
+	timestampLayout = "01/02/2006 15:04:05"
+	userAgent       = "LivePhish/3.4.5.357 (Android; 7.1.2; Asus; ASUS_Z01QD)"
+	apiBase         = "https://www.livephish.com/"
+	apiBase2        = "https://id.livephish.com/connect/"
+	plusUrl         = "https://plus.livephish.com/"
 )
 
 var (
@@ -43,11 +45,17 @@ var (
 )
 
 func (wc *WriteCounter) Write(p []byte) (int, error) {
+	var speed int64 = 0
 	n := len(p)
-	wc.Downloaded += uint64(n)
+	wc.Downloaded += int64(n)
 	percentage := float64(wc.Downloaded) / float64(wc.Total) * float64(100)
 	wc.Percentage = int(percentage)
-	fmt.Printf("\r%d%%, %s/%s ", wc.Percentage, humanize.Bytes(wc.Downloaded), wc.TotalStr)
+	toDivideBy := time.Now().UnixMilli() - wc.StartTime
+	if toDivideBy != 0 {
+		speed = int64(wc.Downloaded) / toDivideBy * 1000
+	}
+	fmt.Printf("\r%d%% @ %s/s, %s/%s ", wc.Percentage, humanize.Bytes(uint64(speed)),
+		humanize.Bytes(uint64(wc.Downloaded)), wc.TotalStr)
 	return n, nil
 }
 
@@ -59,13 +67,19 @@ func handleErr(errText string, err error, _panic bool) {
 	fmt.Println(errString)
 }
 
+func wasRunFromSrc() bool {
+	buildPath := filepath.Join(os.TempDir(), "go-build")
+	return strings.HasPrefix(os.Args[0], buildPath)
+}
+
 func getScriptDir() (string, error) {
 	var (
 		ok    bool
 		err   error
 		fname string
 	)
-	if filepath.IsAbs(os.Args[0]) {
+	runFromSrc := wasRunFromSrc()
+	if runFromSrc {
 		_, fname, _, ok = runtime.Caller(0)
 		if !ok {
 			return "", errors.New("Failed to get script filename.")
@@ -76,20 +90,22 @@ func getScriptDir() (string, error) {
 			return "", err
 		}
 	}
-	scriptDir := filepath.Dir(fname)
-	return scriptDir, nil
+	return filepath.Dir(fname), nil
 }
 
 func readTxtFile(path string) ([]string, error) {
 	var lines []string
-	f, err := os.Open(path)
+	f, err := os.OpenFile(path, os.O_RDONLY, 0755)
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
-		lines = append(lines, strings.TrimSpace(scanner.Text()))
+		line := strings.TrimSpace(scanner.Text())
+		if line != "" {
+			lines = append(lines, line)
+		}
 	}
 	if scanner.Err() != nil {
 		return nil, scanner.Err()
@@ -111,9 +127,9 @@ func processUrls(urls []string) ([]string, error) {
 		processed []string
 		txtPaths  []string
 	)
-	for _, url := range urls {
-		if strings.HasSuffix(url, ".txt") && !contains(txtPaths, url) {
-			txtLines, err := readTxtFile(url)
+	for _, _url := range urls {
+		if strings.HasSuffix(_url, ".txt") && !contains(txtPaths, _url) {
+			txtLines, err := readTxtFile(_url)
 			if err != nil {
 				return nil, err
 			}
@@ -122,10 +138,10 @@ func processUrls(urls []string) ([]string, error) {
 					processed = append(processed, txtLine)
 				}
 			}
-			txtPaths = append(txtPaths, url)
+			txtPaths = append(txtPaths, _url)
 		} else {
-			if !contains(processed, url) {
-				processed = append(processed, url)
+			if !contains(processed, _url) {
+				processed = append(processed, _url)
 			}
 		}
 	}
@@ -184,8 +200,7 @@ func parseArgs() *Args {
 }
 
 func makeDirs(path string) error {
-	err := os.MkdirAll(path, 0755)
-	return err
+	return os.MkdirAll(path, 0755)
 }
 
 func fileExists(path string) (bool, error) {
@@ -315,9 +330,8 @@ func getSubInfo(email, token, sessToken string) (*SubInfo, error) {
 }
 
 func parseTimestamps(start, end string) (string, string) {
-	const layout = "01/02/2006 15:04:05"
-	startTime, _ := time.Parse(layout, start)
-	endTime, _ := time.Parse(layout, end)
+	startTime, _ := time.Parse(timestampLayout, start)
+	endTime, _ := time.Parse(timestampLayout, end)
 	parsedStart := strconv.FormatInt(startTime.Unix(), 10)
 	parsedEnd := strconv.FormatInt(endTime.Unix(), 10)
 	return parsedStart, parsedEnd
@@ -373,7 +387,7 @@ func getAlbumMeta(albumId string) (*AlbumMeta, error) {
 }
 
 func generateSig() (string, string, error) {
-	timestamp := time.Now().Unix()
+	timestamp := time.Now().Unix() + 50
 	timestampStr := strconv.FormatInt(timestamp, 10)
 	h := md5.New()
 	_, err := h.Write([]byte(sigKey + timestampStr))
@@ -436,7 +450,7 @@ func queryQuality(streamUrl string) *Quality {
 }
 
 func downloadTrack(trackPath, url string) error {
-	f, err := os.Create(trackPath)
+	f, err := os.OpenFile(trackPath, os.O_CREATE|os.O_WRONLY, 0755)
 	if err != nil {
 		return err
 	}
@@ -445,7 +459,7 @@ func downloadTrack(trackPath, url string) error {
 	if err != nil {
 		return err
 	}
-	req.Header.Add("Referer", "https://plus.livephish.com/")
+	req.Header.Add("Referer", plusUrl)
 	req.Header.Add("User-Agent", userAgent)
 	req.Header.Add("Range", "bytes=0-")
 	do, err := client.Do(req)
@@ -456,8 +470,12 @@ func downloadTrack(trackPath, url string) error {
 	if do.StatusCode != http.StatusOK && do.StatusCode != http.StatusPartialContent {
 		return errors.New(do.Status)
 	}
-	totalBytes := uint64(do.ContentLength)
-	counter := &WriteCounter{Total: totalBytes, TotalStr: humanize.Bytes(totalBytes)}
+	totalBytes := do.ContentLength
+	counter := &WriteCounter{
+		Total:     totalBytes,
+		TotalStr:  humanize.Bytes(uint64(totalBytes)),
+		StartTime: time.Now().UnixMilli(),
+	}
 	_, err = io.Copy(f, io.TeeReader(do.Body, counter))
 	fmt.Println("")
 	return err
