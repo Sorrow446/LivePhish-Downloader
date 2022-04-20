@@ -1,6 +1,6 @@
 # LivePhish-Downloader
 LivePhish downloader written in Go..
-![](https://i.imgur.com/FKfmvWg.png)
+![]https://i.imgur.com/bw9WApw.png)
 [Windows, Linux and macOS binaries](https://github.com/Sorrow446/LivePhish-Downloader/releases)
 
 # Setup
