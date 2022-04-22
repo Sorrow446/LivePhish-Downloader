@@ -17,7 +17,7 @@ Configure any other options if needed.
 Args take priority over the config file.
 
 Download two albums:   
-`lp_dl_x64.exe https://plus.livephish.com/#/catalog/recording/1747 https://www.livephish.com/browse/music/0,1748`
+`lp_dl_x64.exe https://plus.livephish.com/#/catalog/recording/1747 https://www.livephish.com/browse/music/0,1748/Phish-mp3-flac-download-2-27-2022-Moon-Palace-Resort-Riviera-Maya-MX`
 
 Download a single album and from two text files:   
 `lp_dl_x64.exe https://plus.livephish.com/#/catalog/recording/1747 G:\1.txt G:\2.txt`
