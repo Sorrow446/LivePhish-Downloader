@@ -3,5 +3,5 @@
     "password": "",
     "format": 3,
     "outPath": "LivePhish downloads",
-    "epochCompensation": 50
+    "epochCompensation": 5
 }
