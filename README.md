@@ -12,7 +12,7 @@ Configure any other options if needed.
 |password|Password.
 |format|Download quality. 1 = AAC 150, 2 = 16-bit / 44.1 kHz ALAC, 3 = 16-bit / 44.1 kHz FLAC.
 |outPath|Where to download to. Path will be made if it doesn't already exist.
-|epochCompensation|Epoch compensation for signature generation. 5 should be fine for most people. If this is too high or too low, the API won't return a track stream.
+|epochCompensation|Epoch compensation for signature generation in seconds. 5 should be fine for most people. If this is too high or too low, the API won't return a track stream.
 
 # Usage
 Args take priority over the config file.
