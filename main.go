@@ -165,8 +165,8 @@ func parseCfg() (*Config, error) {
 	if !(cfg.Format >= 1 && cfg.Format <= 3) {
 		return nil, errors.New("Format must be between 1 and 3.")
 	}
-	if !(cfg.EpochCompensation >= 0 && cfg.EpochCompensation <= 5000) {
-		return nil, errors.New("Epoch compensation must be between 0 and 5000.")
+	if !(cfg.EpochCompensation >= 0 && cfg.EpochCompensation <= 100) {
+		return nil, errors.New("Epoch compensation must be between 0 and 100.")
 	}
 	cfg.Format = resolveFormat[cfg.Format]
 	if args.OutPath != "" {
