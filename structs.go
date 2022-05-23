@@ -9,11 +9,12 @@ type WriteCounter struct {
 }
 
 type Config struct {
-	Email    string
-	Password string
-	Urls     []string
-	Format   int
-	OutPath  string
+	Email             string
+	Password          string
+	Urls              []string
+	Format            int
+	OutPath           string
+	EpochCompensation int64
 }
 
 type Args struct {

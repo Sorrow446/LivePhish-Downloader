@@ -2,5 +2,6 @@
     "email": "",
     "password": "",
     "format": 3,
-    "outPath": "LivePhish downloads"
+    "outPath": "LivePhish downloads",
+    "epochCompensation": 50
 }

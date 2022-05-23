@@ -165,6 +165,9 @@ func parseCfg() (*Config, error) {
 	if !(cfg.Format >= 1 && cfg.Format <= 3) {
 		return nil, errors.New("Format must be between 1 and 3.")
 	}
+	if !(cfg.EpochCompensation >= 0 && cfg.EpochCompensation <= 5000) {
+		return nil, errors.New("Epoch compensation must be between 0 and 5000.")
+	}
 	cfg.Format = resolveFormat[cfg.Format]
 	if args.OutPath != "" {
 		cfg.OutPath = args.OutPath
@@ -386,8 +389,8 @@ func getAlbumMeta(albumId string) (*AlbumMeta, error) {
 	return &obj, nil
 }
 
-func generateSig() (string, string, error) {
-	timestamp := time.Now().Unix() + 50
+func generateSig(epochComp int64) (string, string, error) {
+	timestamp := time.Now().Unix() + epochComp
 	timestampStr := strconv.FormatInt(timestamp, 10)
 	h := md5.New()
 	_, err := h.Write([]byte(sigKey + timestampStr))
@@ -397,13 +400,13 @@ func generateSig() (string, string, error) {
 	return hex.EncodeToString(h.Sum(nil)), timestampStr, nil
 }
 
-func getStreamMeta(trackId, format int, streamParams *StreamParams) (string, error) {
+func getStreamMeta(trackId, format int, streamParams *StreamParams, epochComp int64) (string, error) {
 	req, err := http.NewRequest(http.MethodGet, apiBase+"bigriver/subPlayer.aspx", nil)
 	if err != nil {
 		return "", err
 	}
 	query := url.Values{}
-	sig, timestamp, err := generateSig()
+	sig, timestamp, err := generateSig(epochComp)
 	if err != nil {
 		return "", err
 	}
@@ -554,13 +557,16 @@ func main() {
 		trackTotal := len(meta.Response.Tracks)
 		for trackNum, track := range meta.Response.Tracks {
 			trackNum++
-			streamUrl, err := getStreamMeta(track.TrackID, cfg.Format, streamParams)
+			streamUrl, err := getStreamMeta(track.TrackID, cfg.Format, streamParams, cfg.EpochCompensation)
 			if err != nil {
 				handleErr("Failed to get track stream metadata.", err, false)
 				continue
 			}
 			if streamUrl == "" {
-				fmt.Println("The API didn't return a track stream URL.")
+				fmt.Println(
+					"The API didn't return a track stream URL. " +
+						"Try increasing or decreasing the epoch compensation option.",
+				)
 				continue
 			}
 			quality := queryQuality(streamUrl)
